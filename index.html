@@ -7,7 +7,7 @@
 <style>
   :root{
     --bg:#0b0f14; --card:#131a22; --line:#1f2a36;
-    --txt:#e6edf3; --muted:#8aa0b2; --accent:#4cc2ff; --warn:#ffb454; --ok:#7ee787;
+    --txt:#e6edf3; --muted:#8aa0b2; --accent:#4cc2ff; --warn:#ffb454; --ok:#7ee787; --no:#ff7b72;
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box}
@@ -21,14 +21,21 @@
     font-size:.7rem;padding:2px 8px;border-radius:99px;margin-bottom:12px;letter-spacing:.3px}
   main{max-width:900px;margin:0 auto;display:grid;gap:14px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .card.block{border-color:#2a3a2f;background:#0f1713}
   .card h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.6px;color:var(--accent);
-    margin:0;padding:12px 16px;border-bottom:1px solid var(--line);background:#0f151c}
+    margin:0;padding:12px 16px;border-bottom:1px solid var(--line);background:#0f151c;
+    display:flex;align-items:center;gap:8px}
+  .card.block h2{color:var(--ok);background:#0d1510;border-bottom-color:#2a3a2f}
   .rows{padding:6px 16px}
   .row{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:.9rem}
   .row:last-child{border-bottom:none}
   .k{color:var(--muted);flex:0 0 42%;min-width:120px}
   .v{color:var(--txt);font-family:var(--mono);word-break:break-word;flex:1}
   .v.hot{color:var(--warn)}
+  .v.no{color:var(--no)}
+  .v.ok{color:var(--ok)}
+  .note{padding:10px 16px;color:var(--muted);font-size:.84rem;border-top:1px solid var(--line)}
+  .card.block .note{color:#9fc3a8;border-top-color:#2a3a2f}
   footer{max-width:900px;margin:22px auto;color:var(--muted);font-size:.82rem;
     border-top:1px solid var(--line);padding-top:14px}
   canvas{display:none}
@@ -51,38 +58,65 @@
 <script>
 const out = document.getElementById('out');
 
-function card(title, rows){
-  const c = document.createElement('section'); c.className='card';
+function card(title, rows, opts){
+  opts = opts || {};
+  const c = document.createElement('section'); c.className='card'+(opts.block?' block':'');
   const h = document.createElement('h2'); h.textContent=title; c.appendChild(h);
   const box = document.createElement('div'); box.className='rows';
-  rows.forEach(([k,v,hot])=>{
-    const r=document.createElement('div'); r.className='row';
-    const kk=document.createElement('div'); kk.className='k'; kk.textContent=k;
-    const vv=document.createElement('div'); vv.className='v'+(hot?' hot':''); vv.textContent=(v===''||v==null)?'—':v;
-    r.appendChild(kk); r.appendChild(vv); box.appendChild(r);
-  });
-  c.appendChild(box); out.appendChild(c); return box;
+  (rows||[]).forEach(row=>fillRow(box,row));
+  c.appendChild(box);
+  if(opts.note){ const nn=document.createElement('div'); nn.className='note'; nn.textContent=opts.note; c.appendChild(nn); }
+  out.appendChild(c); return box;
 }
+function fillRow(box,[k,v,cls]){
+  const r=document.createElement('div'); r.className='row';
+  const kk=document.createElement('div'); kk.className='k'; kk.textContent=k;
+  const vv=document.createElement('div'); vv.className='v'+(cls?' '+cls:''); vv.textContent=(v===''||v==null)?'—':v;
+  r.appendChild(kk); r.appendChild(vv); box.appendChild(r); return r;
+}
+function replaceRows(box,rows){ box.innerHTML=''; rows.forEach(row=>fillRow(box,row)); }
+
+const n = navigator;
 
 // -------- Dispositivo / navegador --------
-const n = navigator;
 card('Dispositivo e navegador', [
   ['User agent', n.userAgent],
   ['Plataforma', n.platform],
-  ['Sistema', n.userAgentData ? (n.userAgentData.platform||'—') : '—'],
-  ['Núcleos de CPU', n.hardwareConcurrency, true],
-  ['Memória (aprox.)', n.deviceMemory ? n.deviceMemory+' GB' : 'não exposto', true],
+  ['Núcleos de CPU', n.hardwareConcurrency, 'hot'],
+  ['Memória (aprox.)', n.deviceMemory ? n.deviceMemory+' GB' : 'não exposto', 'hot'],
   ['Idioma', n.language],
   ['Idiomas aceitos', (n.languages||[]).join(', ')],
-  ['Touchscreen', (navigator.maxTouchPoints>0)?'sim ('+n.maxTouchPoints+' pontos)':'não'],
+  ['Touchscreen', (n.maxTouchPoints>0)?'sim ('+n.maxTouchPoints+' pontos)':'não'],
   ['Cookies ativos', n.cookieEnabled?'sim':'não'],
   ['Do Not Track', n.doNotTrack||'não definido'],
+  ['Online', n.onLine?'sim':'não'],
 ]);
+
+// -------- Identidade de alta entropia (UA-CH) --------
+(function(){
+  const box = card('Identidade detalhada (arquitetura, SO, versões)', [['lendo...','—']]);
+  if(n.userAgentData && n.userAgentData.getHighEntropyValues){
+    n.userAgentData.getHighEntropyValues([
+      'architecture','bitness','model','platform','platformVersion','uaFullVersion','fullVersionList'
+    ]).then(d=>{
+      const brands=(d.fullVersionList||[]).map(b=>b.brand+' '+b.version).join(' · ');
+      replaceRows(box,[
+        ['Arquitetura CPU', (d.architecture||'—')+(d.bitness?' ('+d.bitness+' bits)':''), 'hot'],
+        ['Sistema', (d.platform||'—')+' '+(d.platformVersion||''), 'hot'],
+        ['Modelo do aparelho', d.model||'(não informado)', d.model?'hot':''],
+        ['Navegador', d.uaFullVersion||'—'],
+        ['Motores', brands||'—'],
+      ]);
+    }).catch(()=>replaceRows(box,[['Indisponível','navegador não expõe UA-CH']]));
+  } else {
+    replaceRows(box,[['Indisponível','só em navegadores Chromium']]);
+  }
+})();
 
 // -------- Tela --------
 const s = screen;
 card('Tela e janela', [
-  ['Resolução', s.width+' x '+s.height, true],
+  ['Resolução', s.width+' x '+s.height, 'hot'],
   ['Área útil', s.availWidth+' x '+s.availHeight],
   ['Profundidade de cor', s.colorDepth+' bits'],
   ['Densidade de pixel', window.devicePixelRatio],
@@ -90,26 +124,56 @@ card('Tela e janela', [
   ['Orientação', (s.orientation&&s.orientation.type)||'—'],
 ]);
 
+// -------- Preferências / acessibilidade --------
+(function(){
+  const mq=q=>window.matchMedia(q).matches;
+  card('Preferências do sistema (revelam seu setup)', [
+    ['Tema', mq('(prefers-color-scheme: dark)')?'escuro':'claro', 'hot'],
+    ['Menos movimento', mq('(prefers-reduced-motion: reduce)')?'ligado':'desligado'],
+    ['Mais contraste', mq('(prefers-contrast: more)')?'sim':'não/—'],
+    ['Transparência reduzida', mq('(prefers-reduced-transparency: reduce)')?'sim':'não/—'],
+    ['Ponteiro principal', mq('(pointer: fine)')?'mouse/caneta':(mq('(pointer: coarse)')?'dedo (touch)':'—'), 'hot'],
+    ['Passa o mouse (hover)', mq('(hover: hover)')?'sim (desktop)':'não (mobile)'],
+    ['HDR', mq('(dynamic-range: high)')?'sim':'não/—'],
+  ]);
+})();
+
 // -------- Tempo / local aproximado --------
 const tz = Intl.DateTimeFormat().resolvedOptions();
 card('Fuso e horário (= pista de onde você está)', [
-  ['Fuso horário', tz.timeZone, true],
+  ['Fuso horário', tz.timeZone, 'hot'],
   ['Hora local', new Date().toString()],
   ['Offset UTC', (-new Date().getTimezoneOffset()/60)+'h'],
   ['Calendário/locale', tz.locale],
 ]);
 
-// -------- GPU real --------
+// -------- Como chegou aqui --------
+card('Como você chegou nesta página', [
+  ['Veio de (referrer)', document.referrer || '(digitou direto ou link protegido)', document.referrer?'hot':''],
+  ['Endereço desta aba', location.href],
+], {note:'O "referrer" mostra de qual site você clicou no link — WhatsApp, Instagram, Google, etc.'});
+
+// -------- GPU / WebGL --------
 (function(){
-  let r=['não disponível'],model='—';
   try{
     const gl=document.createElement('canvas').getContext('webgl');
     const dbg=gl.getExtension('WEBGL_debug_renderer_info');
-    model=gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
-    r=[['Placa de vídeo', model, true],
-       ['Fabricante', gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL)]];
-  }catch(e){ r=[['Placa de vídeo','bloqueado pelo navegador']]; }
-  card('Hardware gráfico', r);
+    const model=gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
+    const vendor=gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL);
+    // hash de parâmetros do WebGL
+    let acc='';
+    ['VERSION','SHADING_LANGUAGE_VERSION','MAX_TEXTURE_SIZE','MAX_VIEWPORT_DIMS',
+     'MAX_RENDERBUFFER_SIZE','MAX_VERTEX_ATTRIBS','MAX_TEXTURE_IMAGE_UNITS'].forEach(p=>{
+      try{acc+=p+'='+gl.getParameter(gl[p])+';';}catch(e){}
+    });
+    acc+=(gl.getSupportedExtensions()||[]).join(',');
+    let h=0; for(let i=0;i<acc.length;i++){h=(h*31+acc.charCodeAt(i))>>>0;}
+    card('Hardware gráfico (WebGL)', [
+      ['Placa de vídeo', model, 'hot'],
+      ['Fabricante', vendor],
+      ['WebGL hash', 'gl_'+h.toString(16), 'hot'],
+    ]);
+  }catch(e){ card('Hardware gráfico (WebGL)', [['Placa de vídeo','bloqueado pelo navegador']]); }
 })();
 
 // -------- Canvas fingerprint --------
@@ -122,59 +186,164 @@ card('Fuso e horário (= pista de onde você está)', [
     ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillText('fingerprint \u{1F512} 42',6,6);
     const data=c.toDataURL();
     let h=0; for(let i=0;i<data.length;i++){h=(h*31+data.charCodeAt(i))>>>0;}
-    card('Impressão digital (única do seu aparelho)', [
-      ['Canvas hash', 'fp_'+h.toString(16), true],
-      ['O que é isso', 'Mesmo navegador anônimo gera o mesmo código → dá pra te reconhecer'],
-    ]);
+    card('Impressão digital — Canvas', [
+      ['Canvas hash', 'cv_'+h.toString(16), 'hot'],
+    ], {note:'Mesmo em aba anônima, seu aparelho gera o mesmo código. Dá pra te reconhecer entre sessões.'});
   }catch(e){}
 })();
 
+// -------- Audio fingerprint --------
+(function(){
+  const box = card('Impressão digital — Áudio', [['calculando...','—']]);
+  try{
+    const Ctx=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+    const ac=new Ctx(1,44100,44100);
+    const osc=ac.createOscillator(); osc.type='triangle'; osc.frequency.value=10000;
+    const comp=ac.createDynamicsCompressor();
+    osc.connect(comp); comp.connect(ac.destination); osc.start(0);
+    ac.startRendering().then(buf=>{
+      const d=buf.getChannelData(0); let sum=0;
+      for(let i=4000;i<5000;i++){ sum+=Math.abs(d[i]); }
+      replaceRows(box,[
+        ['Audio hash', 'au_'+sum.toString().replace('.','').slice(0,12), 'hot'],
+      ]);
+    }).catch(()=>replaceRows(box,[['Indisponível','—']]));
+  }catch(e){ replaceRows(box,[['Indisponível','—']]); }
+})();
+
+// -------- Fontes instaladas --------
+(function(){
+  const base=['monospace','sans-serif','serif'];
+  const test=['Arial','Helvetica','Times New Roman','Courier New','Verdana','Georgia',
+    'Comic Sans MS','Impact','Tahoma','Trebuchet MS','Calibri','Cambria','Segoe UI',
+    'Roboto','Ubuntu','Noto Sans','DejaVu Sans','Liberation Sans','Consolas','Menlo',
+    'San Francisco','Helvetica Neue','Apple Color Emoji','Segoe UI Emoji'];
+  const span=document.createElement('span');
+  span.style.cssText='position:absolute;left:-9999px;font-size:72px';
+  span.textContent='mmmmmmmmmmlli';
+  document.body.appendChild(span);
+  const baseW={};
+  base.forEach(b=>{ span.style.fontFamily=b; baseW[b]={w:span.offsetWidth,h:span.offsetHeight}; });
+  const found=test.filter(f=>{
+    return base.some(b=>{
+      span.style.fontFamily="'"+f+"',"+b;
+      return span.offsetWidth!==baseW[b].w || span.offsetHeight!==baseW[b].h;
+    });
+  });
+  document.body.removeChild(span);
+  card('Fontes detectadas no seu aparelho', [
+    ['Quantidade testada', test.length+' comuns'],
+    ['Encontradas', found.length+' → '+(found.join(', ')||'—'), 'hot'],
+  ], {note:'A combinação de fontes instaladas ajuda a te distinguir de milhares de outros aparelhos.'});
+})();
+
+// -------- Câmeras / microfones --------
+(function(){
+  const box = card('Câmeras e microfones (sem acessar)', [['verificando...','—']]);
+  if(n.mediaDevices && n.mediaDevices.enumerateDevices){
+    n.mediaDevices.enumerateDevices().then(list=>{
+      const cam=list.filter(d=>d.kind==='videoinput').length;
+      const mic=list.filter(d=>d.kind==='audioinput').length;
+      const spk=list.filter(d=>d.kind==='audiooutput').length;
+      replaceRows(box,[
+        ['Câmeras', cam, cam?'hot':''],
+        ['Microfones', mic, mic?'hot':''],
+        ['Saídas de áudio', spk],
+      ]);
+    }).catch(()=>replaceRows(box,[['Indisponível','—']]));
+  } else replaceRows(box,[['Indisponível','—']]);
+})();
+
+// -------- Permissões já concedidas --------
+(function(){
+  const box = card('Permissões (sem te perguntar nada)', [['consultando...','—']]);
+  if(n.permissions && n.permissions.query){
+    const names=['geolocation','notifications','camera','microphone','clipboard-read'];
+    Promise.all(names.map(nm=>
+      n.permissions.query({name:nm}).then(r=>[nm,r.state]).catch(()=>[nm,'n/d'])
+    )).then(res=>{
+      replaceRows(box,res.map(([nm,st])=>[nm, st, st==='granted'?'ok':(st==='denied'?'no':'')]));
+    }).catch(()=>replaceRows(box,[['Indisponível','—']]));
+  } else replaceRows(box,[['Indisponível','—']]);
+})();
+
+// -------- Plugins / tipos de mídia --------
+(function(){
+  const plugins=Array.from(n.plugins||[]).map(p=>p.name);
+  const codecs=[];
+  try{
+    const v=document.createElement('video');
+    [['H.264','video/mp4; codecs="avc1.42E01E"'],['WebM','video/webm; codecs="vp9"'],
+     ['AV1','video/mp4; codecs="av01.0.00M.08"'],['HEVC','video/mp4; codecs="hev1"']]
+     .forEach(([nm,t])=>{ if(v.canPlayType(t)) codecs.push(nm); });
+  }catch(e){}
+  card('Plugins e formatos suportados', [
+    ['Plugins', plugins.length?plugins.join(', '):'nenhum exposto'],
+    ['Vídeo suportado', codecs.join(', ')||'—'],
+    ['PDF embutido', (n.pdfViewerEnabled!=null)?(n.pdfViewerEnabled?'sim':'não'):'—'],
+  ]);
+})();
+
 // -------- Bateria --------
-if (navigator.getBattery){
-  navigator.getBattery().then(b=>{
-    card('Bateria', [
-      ['Nível', Math.round(b.level*100)+'%', true],
+if (n.getBattery){
+  const box = card('Bateria', [['lendo...','—']]);
+  n.getBattery().then(b=>{
+    replaceRows(box,[
+      ['Nível', Math.round(b.level*100)+'%', 'hot'],
       ['Carregando', b.charging?'sim':'não'],
-      ['Tempo p/ carregar', isFinite(b.chargingTime)?Math.round(b.chargingTime/60)+' min':'—'],
+      ['Tempo p/ carregar', isFinite(b.chargingTime)&&b.chargingTime>0?Math.round(b.chargingTime/60)+' min':'—'],
+      ['Tempo restante', isFinite(b.dischargingTime)&&b.dischargingTime>0?Math.round(b.dischargingTime/60)+' min':'—'],
     ]);
-  }).catch(()=>{});
+  }).catch(()=>replaceRows(box,[['Indisponível','—']]));
 }
 
-// -------- Rede / conexão --------
+// -------- Conexão --------
 const con = n.connection||n.mozConnection||n.webkitConnection;
 if (con){
   card('Conexão', [
-    ['Tipo', con.effectiveType, true],
+    ['Tipo estimado', con.effectiveType, 'hot'],
     ['Velocidade est.', con.downlink?con.downlink+' Mbps':'—'],
+    ['Latência est.', con.rtt?con.rtt+' ms':'—'],
     ['Economia de dados', con.saveData?'ligada':'desligada'],
   ]);
 }
 
-// -------- IP público + geo (via serviço externo, só leitura) --------
+// -------- Armazenamento (pista de aba anônima) --------
+(function(){
+  const box = card('Armazenamento do navegador', [['estimando...','—']]);
+  const avail=[];
+  avail.push(['localStorage', (()=>{try{localStorage.setItem('_t','1');localStorage.removeItem('_t');return 'disponível';}catch(e){return 'bloqueado';}})()]);
+  avail.push(['IndexedDB', ('indexedDB' in window)?'disponível':'não']);
+  if(n.storage && n.storage.estimate){
+    n.storage.estimate().then(e=>{
+      const q=e.quota?Math.round(e.quota/1048576):null;
+      replaceRows(box, avail.concat([
+        ['Cota de armazenamento', q!=null?q+' MB':'—', 'hot'],
+        ['Em uso', e.usage!=null?Math.round(e.usage/1024)+' KB':'—'],
+      ]));
+    }).catch(()=>replaceRows(box,avail));
+  } else replaceRows(box,avail);
+})();
+
+// -------- IP público + geo --------
 (function(){
   const box = card('Seu IP e localização aproximada', [['buscando...','aguarde']]);
   fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>{
-    box.innerHTML='';
-    const rows=[
-      ['IP público', d.ip, true],
-      ['Cidade', d.city, true],
+    replaceRows(box,[
+      ['IP público', d.ip, 'hot'],
+      ['Cidade', d.city, 'hot'],
       ['Região', d.region],
       ['País', d.country_name],
-      ['Operadora / rede', d.org, true],
-      ['Latitude/Longitude', (d.latitude&&d.longitude)?d.latitude+', '+d.longitude:'—'],
-    ];
-    rows.forEach(([k,v,hot])=>{
-      const r=document.createElement('div'); r.className='row';
-      r.innerHTML='<div class="k">'+k+'</div><div class="v'+(hot?' hot':'')+'">'+(v||'—')+'</div>';
-      box.appendChild(r);
-    });
-  }).catch(()=>{ box.innerHTML='<div class="row"><div class="v">serviço de IP indisponível</div></div>'; });
+      ['Operadora / rede', d.org, 'hot'],
+      ['Lat/Long', (d.latitude&&d.longitude)?d.latitude+', '+d.longitude:'—'],
+    ]);
+  }).catch(()=>replaceRows(box,[['serviço de IP indisponível','—']]));
 })();
 
-// -------- IP local via WebRTC (vaza rede interna) --------
+// -------- IP local via WebRTC --------
 (function(){
   const box = card('IP interno da sua rede (WebRTC)', [['procurando...','—']]);
-  const found=new Set();
+  const found=new Set(); let any=false;
   try{
     const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
     pc.createDataChannel('x');
@@ -183,16 +352,23 @@ if (con){
       const m=/([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
       if(m && !found.has(m[1])){
         found.add(m[1]);
-        if(box.firstChild && box.firstChild.textContent.includes('procurando')) box.innerHTML='';
-        const r=document.createElement('div'); r.className='row';
-        r.innerHTML='<div class="k">Endereço encontrado</div><div class="v hot">'+m[1]+'</div>';
-        box.appendChild(r);
+        if(!any){ box.innerHTML=''; any=true; }
+        fillRow(box,['Endereço encontrado', m[1], 'hot']);
       }
     };
     pc.createOffer().then(o=>pc.setLocalDescription(o));
-    setTimeout(()=>{ if(found.size===0) box.innerHTML='<div class="row"><div class="v">navegador bloqueou (bom pra você)</div></div>'; },2500);
-  }catch(e){ box.innerHTML='<div class="row"><div class="v">indisponível</div></div>'; }
+    setTimeout(()=>{ if(!any) replaceRows(box,[['navegador bloqueou (bom pra você)','—','ok']]); },2500);
+  }catch(e){ replaceRows(box,[['indisponível','—']]); }
 })();
+
+// -------- O que a página NÃO consegue ver (o ponto importante) --------
+card('O que esta página NÃO consegue ver', [
+  ['Suas outras abas', 'impossível', 'ok'],
+  ['Seu histórico de navegação', 'impossível', 'ok'],
+  ['Onde você está logado', 'impossível', 'ok'],
+  ['Seus arquivos', 'impossível', 'ok'],
+  ['Suas senhas', 'impossível', 'ok'],
+], {block:true, note:'Cada aba é isolada (same-origin policy). É exatamente por isso que SÓ ABRIR um link, num navegador atualizado, quase nunca te prejudica. O perigo real é você DIGITAR dados numa página falsa, INSTALAR um app, ou ESCANEAR um QR de "conectar dispositivo".'});
 </script>
 </body>
 </html>
