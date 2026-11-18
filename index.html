@@ -21,21 +21,23 @@
     font-size:.7rem;padding:2px 8px;border-radius:99px;margin-bottom:12px;letter-spacing:.3px}
   main{max-width:900px;margin:0 auto;display:grid;gap:14px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-  .card.block{border-color:#2a3a2f;background:#0f1713}
+  .card.live{border-color:#3a2f1a}
   .card h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.6px;color:var(--accent);
-    margin:0;padding:12px 16px;border-bottom:1px solid var(--line);background:#0f151c;
-    display:flex;align-items:center;gap:8px}
-  .card.block h2{color:var(--ok);background:#0d1510;border-bottom-color:#2a3a2f}
+    margin:0;padding:12px 16px;border-bottom:1px solid var(--line);background:#0f151c}
+  .card.live h2{color:var(--warn);background:#151008;border-bottom-color:#3a2f1a}
   .rows{padding:6px 16px}
   .row{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:.9rem}
   .row:last-child{border-bottom:none}
   .k{color:var(--muted);flex:0 0 42%;min-width:120px}
   .v{color:var(--txt);font-family:var(--mono);word-break:break-word;flex:1}
-  .v.hot{color:var(--warn)}
-  .v.no{color:var(--no)}
-  .v.ok{color:var(--ok)}
+  .v.hot{color:var(--warn)} .v.no{color:var(--no)} .v.ok{color:var(--ok)}
   .note{padding:10px 16px;color:var(--muted);font-size:.84rem;border-top:1px solid var(--line)}
-  .card.block .note{color:#9fc3a8;border-top-color:#2a3a2f}
+  .act{padding:12px 16px}
+  button{background:#1b2a38;color:var(--txt);border:1px solid #2b3f52;border-radius:8px;
+    padding:9px 14px;font-size:.9rem;cursor:pointer;font-family:inherit}
+  button:active{transform:translateY(1px)}
+  input{width:100%;background:#0c1218;border:1px solid var(--line);border-radius:8px;
+    color:var(--txt);padding:10px;font-family:var(--mono);font-size:.9rem}
   footer{max-width:900px;margin:22px auto;color:var(--muted);font-size:.82rem;
     border-top:1px solid var(--line);padding-top:14px}
   canvas{display:none}
@@ -49,326 +51,268 @@
 </header>
 <main id="out"></main>
 <footer>
-  Nada aqui sai do seu aparelho — tudo é exibido só pra você, nesta tela.
-  Isto é <b>fingerprinting</b> e metadados de conexão: informação que qualquer site lê de graça.
-  Não é vírus, não é invasão, não é acesso a arquivos ou senhas. É só o quanto o navegador fala sozinho.
+  Tudo é exibido só pra você, nesta tela — nada é enviado a ninguém.
+  E repare: eu <b>nem precisei das suas outras abas, do seu histórico ou das suas senhas</b> pra saber tudo isto.
+  É só o quanto o navegador fala sozinho.
   <canvas id="fp" width="240" height="60"></canvas>
 </footer>
 
 <script>
 const out = document.getElementById('out');
-
 function card(title, rows, opts){
-  opts = opts || {};
-  const c = document.createElement('section'); c.className='card'+(opts.block?' block':'');
-  const h = document.createElement('h2'); h.textContent=title; c.appendChild(h);
-  const box = document.createElement('div'); box.className='rows';
-  (rows||[]).forEach(row=>fillRow(box,row));
-  c.appendChild(box);
-  if(opts.note){ const nn=document.createElement('div'); nn.className='note'; nn.textContent=opts.note; c.appendChild(nn); }
-  out.appendChild(c); return box;
+  opts=opts||{};
+  const c=document.createElement('section'); c.className='card'+(opts.live?' live':'');
+  const h=document.createElement('h2'); h.textContent=title; c.appendChild(h);
+  const box=document.createElement('div'); box.className='rows';
+  (rows||[]).forEach(r=>fillRow(box,r)); c.appendChild(box);
+  if(opts.note){const nn=document.createElement('div');nn.className='note';nn.textContent=opts.note;c.appendChild(nn);}
+  out.appendChild(c); return {box,card:c};
 }
 function fillRow(box,[k,v,cls]){
   const r=document.createElement('div'); r.className='row';
   const kk=document.createElement('div'); kk.className='k'; kk.textContent=k;
   const vv=document.createElement('div'); vv.className='v'+(cls?' '+cls:''); vv.textContent=(v===''||v==null)?'—':v;
-  r.appendChild(kk); r.appendChild(vv); box.appendChild(r); return r;
+  r.appendChild(kk); r.appendChild(vv); box.appendChild(r); return vv;
 }
-function replaceRows(box,rows){ box.innerHTML=''; rows.forEach(row=>fillRow(box,row)); }
+function replaceRows(box,rows){ box.innerHTML=''; const o={}; rows.forEach(r=>{o[r[0]]=fillRow(box,r);}); return o; }
+const n=navigator;
 
-const n = navigator;
+/* ===== DADOS ESTÁTICOS ===== */
 
-// -------- Dispositivo / navegador --------
 card('Dispositivo e navegador', [
   ['User agent', n.userAgent],
   ['Plataforma', n.platform],
   ['Núcleos de CPU', n.hardwareConcurrency, 'hot'],
-  ['Memória (aprox.)', n.deviceMemory ? n.deviceMemory+' GB' : 'não exposto', 'hot'],
+  ['Memória (aprox.)', n.deviceMemory?n.deviceMemory+' GB':'não exposto', 'hot'],
   ['Idioma', n.language],
   ['Idiomas aceitos', (n.languages||[]).join(', ')],
   ['Touchscreen', (n.maxTouchPoints>0)?'sim ('+n.maxTouchPoints+' pontos)':'não'],
   ['Cookies ativos', n.cookieEnabled?'sim':'não'],
-  ['Do Not Track', n.doNotTrack||'não definido'],
-  ['Online', n.onLine?'sim':'não'],
 ]);
 
-// -------- Identidade de alta entropia (UA-CH) --------
 (function(){
-  const box = card('Identidade detalhada (arquitetura, SO, versões)', [['lendo...','—']]);
-  if(n.userAgentData && n.userAgentData.getHighEntropyValues){
-    n.userAgentData.getHighEntropyValues([
-      'architecture','bitness','model','platform','platformVersion','uaFullVersion','fullVersionList'
-    ]).then(d=>{
-      const brands=(d.fullVersionList||[]).map(b=>b.brand+' '+b.version).join(' · ');
+  const {box}=card('Identidade detalhada (arquitetura, SO, versões)', [['lendo...','—']]);
+  if(n.userAgentData&&n.userAgentData.getHighEntropyValues){
+    n.userAgentData.getHighEntropyValues(['architecture','bitness','model','platform','platformVersion','uaFullVersion','fullVersionList']).then(d=>{
       replaceRows(box,[
-        ['Arquitetura CPU', (d.architecture||'—')+(d.bitness?' ('+d.bitness+' bits)':''), 'hot'],
-        ['Sistema', (d.platform||'—')+' '+(d.platformVersion||''), 'hot'],
-        ['Modelo do aparelho', d.model||'(não informado)', d.model?'hot':''],
-        ['Navegador', d.uaFullVersion||'—'],
-        ['Motores', brands||'—'],
+        ['Arquitetura CPU',(d.architecture||'—')+(d.bitness?' ('+d.bitness+' bits)':''),'hot'],
+        ['Sistema',(d.platform||'—')+' '+(d.platformVersion||''),'hot'],
+        ['Modelo do aparelho',d.model||'(não informado)',d.model?'hot':''],
+        ['Navegador',d.uaFullVersion||'—'],
+        ['Motores',(d.fullVersionList||[]).map(b=>b.brand+' '+b.version).join(' · ')||'—'],
       ]);
-    }).catch(()=>replaceRows(box,[['Indisponível','navegador não expõe UA-CH']]));
-  } else {
-    replaceRows(box,[['Indisponível','só em navegadores Chromium']]);
-  }
+    }).catch(()=>replaceRows(box,[['Indisponível','—']]));
+  } else replaceRows(box,[['Indisponível','só em Chromium']]);
 })();
 
-// -------- Tela --------
-const s = screen;
+const s=screen;
 card('Tela e janela', [
   ['Resolução', s.width+' x '+s.height, 'hot'],
   ['Área útil', s.availWidth+' x '+s.availHeight],
-  ['Profundidade de cor', s.colorDepth+' bits'],
   ['Densidade de pixel', window.devicePixelRatio],
+  ['Vários monitores', (s.isExtended!=null)?(s.isExtended?'SIM':'não'):'—', s.isExtended?'hot':''],
   ['Janela atual', window.innerWidth+' x '+window.innerHeight],
-  ['Orientação', (s.orientation&&s.orientation.type)||'—'],
 ]);
 
-// -------- Preferências / acessibilidade --------
 (function(){
   const mq=q=>window.matchMedia(q).matches;
-  card('Preferências do sistema (revelam seu setup)', [
+  card('Preferências do sistema', [
     ['Tema', mq('(prefers-color-scheme: dark)')?'escuro':'claro', 'hot'],
+    ['Ponteiro', mq('(pointer: fine)')?'mouse/caneta':(mq('(pointer: coarse)')?'dedo (touch)':'—'), 'hot'],
+    ['Passa o mouse', mq('(hover: hover)')?'sim (desktop)':'não (mobile)'],
     ['Menos movimento', mq('(prefers-reduced-motion: reduce)')?'ligado':'desligado'],
-    ['Mais contraste', mq('(prefers-contrast: more)')?'sim':'não/—'],
-    ['Transparência reduzida', mq('(prefers-reduced-transparency: reduce)')?'sim':'não/—'],
-    ['Ponteiro principal', mq('(pointer: fine)')?'mouse/caneta':(mq('(pointer: coarse)')?'dedo (touch)':'—'), 'hot'],
-    ['Passa o mouse (hover)', mq('(hover: hover)')?'sim (desktop)':'não (mobile)'],
-    ['HDR', mq('(dynamic-range: high)')?'sim':'não/—'],
   ]);
 })();
 
-// -------- Tempo / local aproximado --------
-const tz = Intl.DateTimeFormat().resolvedOptions();
-card('Fuso e horário (= pista de onde você está)', [
+const tz=Intl.DateTimeFormat().resolvedOptions();
+card('Fuso e horário (pista de onde você está)', [
   ['Fuso horário', tz.timeZone, 'hot'],
   ['Hora local', new Date().toString()],
-  ['Offset UTC', (-new Date().getTimezoneOffset()/60)+'h'],
-  ['Calendário/locale', tz.locale],
 ]);
 
-// -------- Como chegou aqui --------
-card('Como você chegou nesta página', [
-  ['Veio de (referrer)', document.referrer || '(digitou direto ou link protegido)', document.referrer?'hot':''],
-  ['Endereço desta aba', location.href],
-], {note:'O "referrer" mostra de qual site você clicou no link — WhatsApp, Instagram, Google, etc.'});
+card('Como você chegou aqui', [
+  ['Veio de (referrer)', document.referrer||'(digitou direto ou link protegido)', document.referrer?'hot':''],
+], {note:'Mostra de qual site você clicou no link — WhatsApp, Instagram, Google...'});
 
-// -------- GPU / WebGL --------
 (function(){
   try{
     const gl=document.createElement('canvas').getContext('webgl');
     const dbg=gl.getExtension('WEBGL_debug_renderer_info');
-    const model=gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
-    const vendor=gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL);
-    // hash de parâmetros do WebGL
-    let acc='';
-    ['VERSION','SHADING_LANGUAGE_VERSION','MAX_TEXTURE_SIZE','MAX_VIEWPORT_DIMS',
-     'MAX_RENDERBUFFER_SIZE','MAX_VERTEX_ATTRIBS','MAX_TEXTURE_IMAGE_UNITS'].forEach(p=>{
-      try{acc+=p+'='+gl.getParameter(gl[p])+';';}catch(e){}
-    });
-    acc+=(gl.getSupportedExtensions()||[]).join(',');
-    let h=0; for(let i=0;i<acc.length;i++){h=(h*31+acc.charCodeAt(i))>>>0;}
     card('Hardware gráfico (WebGL)', [
-      ['Placa de vídeo', model, 'hot'],
-      ['Fabricante', vendor],
-      ['WebGL hash', 'gl_'+h.toString(16), 'hot'],
+      ['Placa de vídeo', gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL), 'hot'],
+      ['Fabricante', gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL)],
     ]);
-  }catch(e){ card('Hardware gráfico (WebGL)', [['Placa de vídeo','bloqueado pelo navegador']]); }
+  }catch(e){ card('Hardware gráfico (WebGL)', [['Placa','bloqueado']]); }
 })();
 
-// -------- Canvas fingerprint --------
 (function(){
   try{
-    const c=document.getElementById('fp'), ctx=c.getContext('2d');
-    ctx.textBaseline='top'; ctx.font='16px Arial';
-    ctx.fillStyle='#f60'; ctx.fillRect(0,0,120,30);
-    ctx.fillStyle='#069'; ctx.fillText('fingerprint \u{1F512} 42',4,4);
-    ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillText('fingerprint \u{1F512} 42',6,6);
-    const data=c.toDataURL();
-    let h=0; for(let i=0;i<data.length;i++){h=(h*31+data.charCodeAt(i))>>>0;}
-    card('Impressão digital — Canvas', [
-      ['Canvas hash', 'cv_'+h.toString(16), 'hot'],
-    ], {note:'Mesmo em aba anônima, seu aparelho gera o mesmo código. Dá pra te reconhecer entre sessões.'});
+    const c=document.getElementById('fp'),ctx=c.getContext('2d');
+    ctx.textBaseline='top';ctx.font='16px Arial';
+    ctx.fillStyle='#f60';ctx.fillRect(0,0,120,30);
+    ctx.fillStyle='#069';ctx.fillText('fingerprint \u{1F512} 42',4,4);
+    const data=c.toDataURL();let h=0;for(let i=0;i<data.length;i++)h=(h*31+data.charCodeAt(i))>>>0;
+    card('Impressão digital — Canvas', [['Canvas hash','cv_'+h.toString(16),'hot']],
+      {note:'Mesmo em aba anônima, seu aparelho gera o mesmo código.'});
   }catch(e){}
 })();
 
-// -------- Audio fingerprint --------
 (function(){
-  const box = card('Impressão digital — Áudio', [['calculando...','—']]);
+  const {box}=card('Impressão digital — Áudio', [['calculando...','—']]);
   try{
     const Ctx=window.OfflineAudioContext||window.webkitOfflineAudioContext;
     const ac=new Ctx(1,44100,44100);
-    const osc=ac.createOscillator(); osc.type='triangle'; osc.frequency.value=10000;
-    const comp=ac.createDynamicsCompressor();
-    osc.connect(comp); comp.connect(ac.destination); osc.start(0);
+    const osc=ac.createOscillator();osc.type='triangle';osc.frequency.value=10000;
+    const comp=ac.createDynamicsCompressor();osc.connect(comp);comp.connect(ac.destination);osc.start(0);
     ac.startRendering().then(buf=>{
-      const d=buf.getChannelData(0); let sum=0;
-      for(let i=4000;i<5000;i++){ sum+=Math.abs(d[i]); }
-      replaceRows(box,[
-        ['Audio hash', 'au_'+sum.toString().replace('.','').slice(0,12), 'hot'],
-      ]);
+      const d=buf.getChannelData(0);let sum=0;for(let i=4000;i<5000;i++)sum+=Math.abs(d[i]);
+      replaceRows(box,[['Audio hash','au_'+sum.toString().replace('.','').slice(0,12),'hot']]);
     }).catch(()=>replaceRows(box,[['Indisponível','—']]));
-  }catch(e){ replaceRows(box,[['Indisponível','—']]); }
+  }catch(e){replaceRows(box,[['Indisponível','—']]);}
 })();
 
-// -------- Fontes instaladas --------
 (function(){
   const base=['monospace','sans-serif','serif'];
-  const test=['Arial','Helvetica','Times New Roman','Courier New','Verdana','Georgia',
-    'Comic Sans MS','Impact','Tahoma','Trebuchet MS','Calibri','Cambria','Segoe UI',
-    'Roboto','Ubuntu','Noto Sans','DejaVu Sans','Liberation Sans','Consolas','Menlo',
-    'San Francisco','Helvetica Neue','Apple Color Emoji','Segoe UI Emoji'];
+  const test=['Arial','Times New Roman','Courier New','Verdana','Georgia','Comic Sans MS','Impact','Tahoma','Trebuchet MS','Calibri','Segoe UI','Roboto','Ubuntu','Noto Sans','Consolas','Menlo','Helvetica Neue'];
   const span=document.createElement('span');
-  span.style.cssText='position:absolute;left:-9999px;font-size:72px';
-  span.textContent='mmmmmmmmmmlli';
+  span.style.cssText='position:absolute;left:-9999px;font-size:72px';span.textContent='mmmmmmmmmmlli';
   document.body.appendChild(span);
-  const baseW={};
-  base.forEach(b=>{ span.style.fontFamily=b; baseW[b]={w:span.offsetWidth,h:span.offsetHeight}; });
-  const found=test.filter(f=>{
-    return base.some(b=>{
-      span.style.fontFamily="'"+f+"',"+b;
-      return span.offsetWidth!==baseW[b].w || span.offsetHeight!==baseW[b].h;
-    });
-  });
+  const bw={};base.forEach(b=>{span.style.fontFamily=b;bw[b]=span.offsetWidth;});
+  const found=test.filter(f=>base.some(b=>{span.style.fontFamily="'"+f+"',"+b;return span.offsetWidth!==bw[b];}));
   document.body.removeChild(span);
-  card('Fontes detectadas no seu aparelho', [
-    ['Quantidade testada', test.length+' comuns'],
-    ['Encontradas', found.length+' → '+(found.join(', ')||'—'), 'hot'],
-  ], {note:'A combinação de fontes instaladas ajuda a te distinguir de milhares de outros aparelhos.'});
+  card('Fontes detectadas no seu aparelho', [['Encontradas',found.length+' → '+(found.join(', ')||'—'),'hot']]);
 })();
 
-// -------- Câmeras / microfones --------
 (function(){
-  const box = card('Câmeras e microfones (sem acessar)', [['verificando...','—']]);
-  if(n.mediaDevices && n.mediaDevices.enumerateDevices){
-    n.mediaDevices.enumerateDevices().then(list=>{
-      const cam=list.filter(d=>d.kind==='videoinput').length;
-      const mic=list.filter(d=>d.kind==='audioinput').length;
-      const spk=list.filter(d=>d.kind==='audiooutput').length;
+  const {box}=card('Câmeras e microfones (sem acessar)', [['verificando...','—']]);
+  if(n.mediaDevices&&n.mediaDevices.enumerateDevices){
+    n.mediaDevices.enumerateDevices().then(l=>{
       replaceRows(box,[
-        ['Câmeras', cam, cam?'hot':''],
-        ['Microfones', mic, mic?'hot':''],
-        ['Saídas de áudio', spk],
+        ['Câmeras', l.filter(d=>d.kind==='videoinput').length, 'hot'],
+        ['Microfones', l.filter(d=>d.kind==='audioinput').length, 'hot'],
+        ['Saídas de áudio', l.filter(d=>d.kind==='audiooutput').length],
       ]);
     }).catch(()=>replaceRows(box,[['Indisponível','—']]));
   } else replaceRows(box,[['Indisponível','—']]);
 })();
 
-// -------- Permissões já concedidas --------
 (function(){
-  const box = card('Permissões (sem te perguntar nada)', [['consultando...','—']]);
-  if(n.permissions && n.permissions.query){
-    const names=['geolocation','notifications','camera','microphone','clipboard-read'];
-    Promise.all(names.map(nm=>
-      n.permissions.query({name:nm}).then(r=>[nm,r.state]).catch(()=>[nm,'n/d'])
-    )).then(res=>{
-      replaceRows(box,res.map(([nm,st])=>[nm, st, st==='granted'?'ok':(st==='denied'?'no':'')]));
-    }).catch(()=>replaceRows(box,[['Indisponível','—']]));
+  const {box}=card('Permissões (sem te perguntar nada)', [['consultando...','—']]);
+  if(n.permissions&&n.permissions.query){
+    const names=['geolocation','notifications','camera','microphone'];
+    Promise.all(names.map(nm=>n.permissions.query({name:nm}).then(r=>[nm,r.state]).catch(()=>[nm,'n/d'])))
+      .then(res=>replaceRows(box,res.map(([nm,st])=>[nm,st,st==='granted'?'ok':(st==='denied'?'no':'')])))
+      .catch(()=>replaceRows(box,[['Indisponível','—']]));
   } else replaceRows(box,[['Indisponível','—']]);
 })();
 
-// -------- Plugins / tipos de mídia --------
 (function(){
-  const plugins=Array.from(n.plugins||[]).map(p=>p.name);
-  const codecs=[];
-  try{
-    const v=document.createElement('video');
-    [['H.264','video/mp4; codecs="avc1.42E01E"'],['WebM','video/webm; codecs="vp9"'],
-     ['AV1','video/mp4; codecs="av01.0.00M.08"'],['HEVC','video/mp4; codecs="hev1"']]
-     .forEach(([nm,t])=>{ if(v.canPlayType(t)) codecs.push(nm); });
-  }catch(e){}
-  card('Plugins e formatos suportados', [
-    ['Plugins', plugins.length?plugins.join(', '):'nenhum exposto'],
-    ['Vídeo suportado', codecs.join(', ')||'—'],
-    ['PDF embutido', (n.pdfViewerEnabled!=null)?(n.pdfViewerEnabled?'sim':'não'):'—'],
-  ]);
+  const voices=()=>{
+    const v=speechSynthesis.getVoices();
+    if(v.length) card('Vozes instaladas (fingerprint do SO)', [['Total',v.length,'hot'],['Exemplos',v.slice(0,5).map(x=>x.name).join(', ')]]);
+  };
+  if('speechSynthesis' in window){ speechSynthesis.onvoiceschanged=voices; setTimeout(voices,300); }
 })();
 
-// -------- Bateria --------
-if (n.getBattery){
-  const box = card('Bateria', [['lendo...','—']]);
-  n.getBattery().then(b=>{
-    replaceRows(box,[
-      ['Nível', Math.round(b.level*100)+'%', 'hot'],
-      ['Carregando', b.charging?'sim':'não'],
-      ['Tempo p/ carregar', isFinite(b.chargingTime)&&b.chargingTime>0?Math.round(b.chargingTime/60)+' min':'—'],
-      ['Tempo restante', isFinite(b.dischargingTime)&&b.dischargingTime>0?Math.round(b.dischargingTime/60)+' min':'—'],
-    ]);
-  }).catch(()=>replaceRows(box,[['Indisponível','—']]));
-}
-
-// -------- Conexão --------
-const con = n.connection||n.mozConnection||n.webkitConnection;
-if (con){
-  card('Conexão', [
-    ['Tipo estimado', con.effectiveType, 'hot'],
-    ['Velocidade est.', con.downlink?con.downlink+' Mbps':'—'],
-    ['Latência est.', con.rtt?con.rtt+' ms':'—'],
-    ['Economia de dados', con.saveData?'ligada':'desligada'],
-  ]);
-}
-
-// -------- Armazenamento (pista de aba anônima) --------
 (function(){
-  const box = card('Armazenamento do navegador', [['estimando...','—']]);
-  const avail=[];
-  avail.push(['localStorage', (()=>{try{localStorage.setItem('_t','1');localStorage.removeItem('_t');return 'disponível';}catch(e){return 'bloqueado';}})()]);
-  avail.push(['IndexedDB', ('indexedDB' in window)?'disponível':'não']);
-  if(n.storage && n.storage.estimate){
-    n.storage.estimate().then(e=>{
-      const q=e.quota?Math.round(e.quota/1048576):null;
-      replaceRows(box, avail.concat([
-        ['Cota de armazenamento', q!=null?q+' MB':'—', 'hot'],
-        ['Em uso', e.usage!=null?Math.round(e.usage/1024)+' KB':'—'],
-      ]));
-    }).catch(()=>replaceRows(box,avail));
-  } else replaceRows(box,avail);
+  const {box}=card('Bateria', [['lendo...','—']]);
+  if(n.getBattery) n.getBattery().then(b=>replaceRows(box,[
+    ['Nível',Math.round(b.level*100)+'%','hot'],
+    ['Carregando',b.charging?'sim':'não'],
+  ])).catch(()=>replaceRows(box,[['Indisponível','—']]));
+  else replaceRows(box,[['Indisponível','—']]);
 })();
 
-// -------- IP público + geo --------
+const con=n.connection||n.webkitConnection;
+if(con) card('Conexão', [
+  ['Tipo estimado', con.effectiveType, 'hot'],
+  ['Velocidade', con.downlink?con.downlink+' Mbps':'—'],
+  ['Latência', con.rtt?con.rtt+' ms':'—'],
+]);
+
 (function(){
-  const box = card('Seu IP e localização aproximada', [['buscando...','aguarde']]);
-  fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>{
-    replaceRows(box,[
-      ['IP público', d.ip, 'hot'],
-      ['Cidade', d.city, 'hot'],
-      ['Região', d.region],
-      ['País', d.country_name],
-      ['Operadora / rede', d.org, 'hot'],
-      ['Lat/Long', (d.latitude&&d.longitude)?d.latitude+', '+d.longitude:'—'],
-    ]);
-  }).catch(()=>replaceRows(box,[['serviço de IP indisponível','—']]));
+  const {box}=card('Seu IP e localização aproximada', [['buscando...','aguarde']]);
+  fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>replaceRows(box,[
+    ['IP público',d.ip,'hot'],['Cidade',d.city,'hot'],['Região',d.region],
+    ['País',d.country_name],['Operadora',d.org,'hot'],
+    ['Lat/Long',(d.latitude&&d.longitude)?d.latitude+', '+d.longitude:'—'],
+  ])).catch(()=>replaceRows(box,[['IP indisponível','—']]));
 })();
 
-// -------- IP local via WebRTC --------
 (function(){
-  const box = card('IP interno da sua rede (WebRTC)', [['procurando...','—']]);
-  const found=new Set(); let any=false;
+  const {box}=card('IP interno da rede (WebRTC)', [['procurando...','—']]);
+  const found=new Set();let any=false;
   try{
     const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
     pc.createDataChannel('x');
-    pc.onicecandidate=e=>{
-      if(!e.candidate) return;
-      const m=/([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
-      if(m && !found.has(m[1])){
-        found.add(m[1]);
-        if(!any){ box.innerHTML=''; any=true; }
-        fillRow(box,['Endereço encontrado', m[1], 'hot']);
-      }
-    };
+    pc.onicecandidate=e=>{if(!e.candidate)return;const m=/([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
+      if(m&&!found.has(m[1])){found.add(m[1]);if(!any){box.innerHTML='';any=true;}fillRow(box,['Endereço',m[1],'hot']);}};
     pc.createOffer().then(o=>pc.setLocalDescription(o));
-    setTimeout(()=>{ if(!any) replaceRows(box,[['navegador bloqueou (bom pra você)','—','ok']]); },2500);
-  }catch(e){ replaceRows(box,[['indisponível','—']]); }
+    setTimeout(()=>{if(!any)replaceRows(box,[['navegador bloqueou','—','ok']]);},2500);
+  }catch(e){replaceRows(box,[['indisponível','—']]);}
 })();
 
-// -------- O que a página NÃO consegue ver (o ponto importante) --------
-card('O que esta página NÃO consegue ver', [
-  ['Suas outras abas', 'impossível', 'ok'],
-  ['Seu histórico de navegação', 'impossível', 'ok'],
-  ['Onde você está logado', 'impossível', 'ok'],
-  ['Seus arquivos', 'impossível', 'ok'],
-  ['Suas senhas', 'impossível', 'ok'],
-], {block:true, note:'Cada aba é isolada (same-origin policy). É exatamente por isso que SÓ ABRIR um link, num navegador atualizado, quase nunca te prejudica. O perigo real é você DIGITAR dados numa página falsa, INSTALAR um app, ou ESCANEAR um QR de "conectar dispositivo".'});
+/* ===== AO VIVO (atualiza em tempo real) ===== */
+
+(function(){
+  const {box}=card('Seu cursor / toque — AO VIVO', [['Posição','mexa o mouse ou arraste o dedo']],{live:true});
+  const r=replaceRows(box,[['Posição X,Y','—','hot'],['Cliques','0'],['Movimentos','0']]);
+  let clicks=0,moves=0;
+  const upd=(x,y)=>{moves++;r['Posição X,Y'].textContent=Math.round(x)+', '+Math.round(y);r['Movimentos'].textContent=moves;};
+  addEventListener('mousemove',e=>upd(e.clientX,e.clientY));
+  addEventListener('touchmove',e=>{const t=e.touches[0];if(t)upd(t.clientX,t.clientY);},{passive:true});
+  addEventListener('click',()=>{clicks++;r['Cliques'].textContent=clicks;});
+})();
+
+(function(){
+  const {box,card:c}=card('O que você digitar AQUI, eu leio — AO VIVO', [],{live:true});
+  const v=fillRow(box,['Capturado','(nada ainda)','hot']);
+  const cnt=fillRow(box,['Teclas','0']);let k=0;
+  const wrap=document.createElement('div');wrap.className='act';
+  const inp=document.createElement('input');inp.placeholder='Digite qualquer coisa aqui...';
+  wrap.appendChild(inp);c.appendChild(wrap);
+  inp.addEventListener('input',()=>{v.textContent=inp.value||'(vazio)';});
+  inp.addEventListener('keydown',()=>{k++;cnt.textContent=k;});
+})();
+
+(function(){
+  const {box}=card('Quando você sai desta aba — AO VIVO', [],{live:true});
+  const r=replaceRows(box,[['Status','ativa','ok'],['Vezes que saiu','0','hot']]);
+  let left=0;
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){left++;r['Vezes que saiu'].textContent=left;r['Status'].textContent='saiu da aba';r['Status'].className='v no';}
+    else{r['Status'].textContent='voltou';r['Status'].className='v ok';}
+  });
+  addEventListener('blur',()=>{r['Status'].textContent='perdeu o foco';});
+  addEventListener('focus',()=>{r['Status'].textContent='ativa';r['Status'].className='v ok';});
+})();
+
+(function(){
+  const {box,card:c}=card('Giroscópio / inclinação (celular) — AO VIVO', [],{live:true});
+  const r=replaceRows(box,[['Inclinação','toque em ATIVAR','hot']]);
+  const start=()=>{
+    addEventListener('deviceorientation',e=>{
+      r['Inclinação'].textContent='frente/trás '+Math.round(e.beta||0)+'°, lado '+Math.round(e.gamma||0)+'°';
+    });
+  };
+  if(typeof DeviceOrientationEvent!=='undefined'&&DeviceOrientationEvent.requestPermission){
+    const wrap=document.createElement('div');wrap.className='act';
+    const b=document.createElement('button');b.textContent='Ativar sensor de movimento';
+    b.onclick=()=>DeviceOrientationEvent.requestPermission().then(p=>{if(p==='granted')start();});
+    wrap.appendChild(b);c.appendChild(wrap);
+  } else start();
+})();
+
+(function(){
+  const {card:c}=card('Posso fazer seu celular vibrar', []);
+  const wrap=document.createElement('div');wrap.className='act';
+  const b=document.createElement('button');b.textContent='Vibrar meu aparelho';
+  b.onclick=()=>{ if(n.vibrate) n.vibrate([200,100,200,100,400]); };
+  wrap.appendChild(b);c.appendChild(wrap);
+  const nn=document.createElement('div');nn.className='note';
+  nn.textContent=n.vibrate?'Funciona na maioria dos Androids. iPhone não permite.':'Seu aparelho não expõe vibração.';
+  c.appendChild(nn);
+})();
 </script>
 </body>
 </html>
