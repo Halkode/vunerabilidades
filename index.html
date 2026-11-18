@@ -31,12 +31,33 @@
     background:rgba(255,107,99,.14);padding:2px 7px;border-radius:99px;white-space:nowrap}
   .threat .d{color:var(--muted);font-size:.85rem;margin-top:4px}
   .threat.track{border-left-color:var(--amber)} .threat.track .tag{color:var(--amber);background:rgba(255,180,84,.14)}
+  .threat.live{border-left-color:var(--accent)} .threat.live .tag{color:var(--accent);background:rgba(76,194,255,.14)}
   .fp{font-family:var(--mono);color:var(--accent);word-break:break-word}
+  .rec{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.78rem;color:var(--red)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--red);animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .stats{display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:.85rem;margin-top:8px}
+  .stats b{color:var(--accent);font-size:1.05rem}
+  .typed{font-family:var(--mono);color:var(--amber);word-break:break-word;margin-top:6px;min-height:1.2em}
   .gated{display:flex;gap:10px;flex-wrap:wrap}
   .gated .g{flex:1;min-width:150px;border:1px solid var(--line);border-left:3px solid var(--green);
     border-radius:8px;background:var(--card);padding:10px 12px;font-size:.84rem}
   .gated .g b{display:block;font-size:.9rem;margin-bottom:2px}
   .gated .g span{color:var(--muted);font-size:.78rem}
+  .phish{border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
+  .lockbar{display:flex;align-items:center;gap:7px;background:#102017;color:var(--green);
+    font-family:var(--mono);font-size:.8rem;padding:9px 14px;border-bottom:1px solid var(--line)}
+  .pform{padding:16px 16px 18px}
+  .pform label{display:block;font-size:.78rem;color:var(--muted);margin:8px 0 4px}
+  .pform input{width:100%;background:#0c1218;border:1px solid var(--line);border-radius:8px;
+    color:var(--txt);padding:11px 12px;font-size:.95rem;font-family:var(--mono)}
+  .pform button{margin-top:14px;width:100%;background:var(--accent);color:#06121c;border:0;
+    border-radius:8px;padding:11px;font-size:.95rem;font-weight:700;cursor:pointer}
+  .loot{border-top:1px solid var(--line);background:#1a1210;padding:0;max-height:0;overflow:hidden;transition:max-height .3s,padding .3s}
+  .loot.on{max-height:400px;padding:14px 16px}
+  .loot .big{color:var(--red);font-weight:700;font-size:.95rem;margin-bottom:8px}
+  .loot .cap{color:var(--amber);font-family:var(--mono);font-size:.9rem;word-break:break-word;margin:3px 0}
+  .loot .expl{color:var(--muted);font-size:.83rem;margin-top:10px}
   footer{color:var(--muted);font-size:.82rem;border-top:1px solid var(--line);margin-top:26px;padding-top:14px}
   footer b{color:var(--txt)}
   canvas{display:none}
@@ -71,16 +92,55 @@
     <div class="d" id="exploit">lendo navegador...</div>
   </div>
   <div class="threat">
+    <div class="t"><span class="tag">INVADIR A REDE</span> Vejo dentro da sua casa</div>
+    <div class="d" id="lan">procurando o endereço interno da sua rede...</div>
+  </div>
+  <div class="threat">
     <div class="t"><span class="tag">ENGANAR</span> Monto um phishing sob medida</div>
     <div class="d">Sei seu idioma, seu dispositivo e seu provedor. Dá pra te mandar a página falsa certa — do seu banco, da sua operadora — no idioma e no formato que você espera. É o passo que vem DEPOIS do clique.</div>
+  </div>
+
+  <h2>E estou te gravando agora</h2>
+  <div class="threat live">
+    <div class="t"><span class="tag">GRAVAR</span> <span class="rec"><span class="dot"></span>REC</span> &nbsp;Cada movimento seu nesta página</div>
+    <div class="d">Rastreadores reais (tipo Hotjar, FullStory) gravam tudo que você faz numa página: mouse, cliques, rolagem e o que você digita — <b>mesmo sem campo de texto</b>. Mexa o mouse ou digite qualquer coisa aqui e veja:</div>
+    <div class="stats">
+      <span>mouse: <b id="mv">0</b></span>
+      <span>cliques: <b id="ck">0</b></span>
+      <span>rolagens: <b id="sc">0</b></span>
+      <span>teclas: <b id="kc">0</b></span>
+    </div>
+    <div class="typed" id="typed">o que você digitar aparece aqui ↑</div>
+  </div>
+
+  <h2>E se você fizer login, eu levo tudo</h2>
+  <div class="phish">
+    <div class="lockbar">🔒 Conexão segura · https://sua-conta-segura.com/login</div>
+    <form class="pform" id="pf" autocomplete="on">
+      <label>E-mail ou usuário</label>
+      <input type="text" id="pf_user" placeholder="voce@email.com" autocomplete="username">
+      <label>Senha</label>
+      <input type="password" id="pf_pass" placeholder="sua senha" autocomplete="current-password">
+      <button type="submit">Entrar</button>
+    </form>
+    <div class="loot" id="loot">
+      <div class="big">Peguei. Se eu fosse mal-intencionado, isso já estava no meu servidor.</div>
+      <div class="cap" id="loot_user"></div>
+      <div class="cap" id="loot_pass"></div>
+      <div class="expl">Repare no cadeado 🔒 e no <b>https</b> lá em cima: eles só dizem que a conexão é
+      criptografada — <b>não</b> que o site é confiável. Um golpista também tem cadeado. Foi exatamente isso
+      que você acabou de fazer: clicou num link, viu "parece seguro", e digitou a senha numa página qualquer.
+      <b>Nunca digite senha a partir de link recebido.</b></div>
+    </div>
   </div>
 
   <h2>E te reconheço mesmo sem cookie</h2>
   <div class="threat track">
     <div class="t"><span class="tag">RASTREAR</span> Sua digital não se apaga</div>
     <div class="d">
-      Sua impressão digital deste aparelho: <span class="fp" id="fp">...</span><br>
-      Esse código é o mesmo em aba anônima e continua igual mesmo se você limpar os cookies. É por isso que os rastreadores usam fingerprint: cookie você apaga, isso não. Te seguem de site em site com ele.
+      Impressão digital deste aparelho: <span class="fp" id="fp">...</span><br>
+      Igual em aba anônima e mesmo limpando os cookies. É por isso que rastreadores usam fingerprint: cookie você apaga, isso não.
+      <div style="margin-top:8px" id="tells">analisando...</div>
     </div>
   </div>
 
@@ -95,8 +155,9 @@
     O que <b>não</b> aparece aqui também é a verdade: seu nome e e-mail do perfil do Chrome, suas senhas salvas
     e suas outras abas. Nenhum site lê isso — é a tela do próprio navegador, só você vê. É essa barreira que
     um spyware caro (tipo Pegasus) precisa furar com uma falha 0-day. Moral: <b>num navegador atualizado, só
-    abrir um link não invade seu aparelho — mas expõe quem e onde você é, e é o primeiro passo de ataques reais.</b>
-    Mantenha o navegador atualizado e desconfie de link que pede login, download ou QR de "conectar dispositivo".
+    abrir um link não invade seu aparelho — mas expõe quem e onde você é, grava o que você faz e é o primeiro
+    passo de ataques reais.</b> Mantenha o navegador atualizado e desconfie de link que pede login, download
+    ou QR de "conectar dispositivo".
     <canvas id="fpc" width="240" height="60"></canvas>
   </footer>
 </div>
@@ -105,6 +166,7 @@
 <script>
 const $=id=>document.getElementById(id);
 
+/* ---------- fingerprint ---------- */
 (function(){
   try{
     const c=$('fpc'),ctx=c.getContext('2d');
@@ -118,43 +180,120 @@ const $=id=>document.getElementById(id);
   }catch(e){$('fp').textContent='indisponível';}
 })();
 
+/* ---------- navegador / exploit ---------- */
 (function(){
-  const ua=navigator.userAgent;
-  const m=ua.match(/(Chrome|Firefox|Edg|Version\/[\d.]+.*Safari|OPR)\/?([\d.]+)?/);
-  let name='seu navegador',ver='';
+  const ua=navigator.userAgent;let name='seu navegador',ver='';
   if(/Edg\//.test(ua)){name='Edge';ver=(ua.match(/Edg\/([\d.]+)/)||[])[1]||'';}
   else if(/OPR\//.test(ua)){name='Opera';ver=(ua.match(/OPR\/([\d.]+)/)||[])[1]||'';}
   else if(/Firefox\//.test(ua)){name='Firefox';ver=(ua.match(/Firefox\/([\d.]+)/)||[])[1]||'';}
   else if(/Chrome\//.test(ua)){name='Chrome';ver=(ua.match(/Chrome\/([\d.]+)/)||[])[1]||'';}
   else if(/Safari\//.test(ua)){name='Safari';ver=(ua.match(/Version\/([\d.]+)/)||[])[1]||'';}
   const os=/Windows/.test(ua)?'Windows':/Android/.test(ua)?'Android':/iPhone|iPad/.test(ua)?'iOS':/Mac/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':'seu sistema';
-  $('exploit').innerHTML='Você está em <b>'+name+' '+(ver||'?')+'</b> no <b>'+os+'</b>. Um atacante não serve um exploit genérico — ele checa sua versão exata e dispara só a falha pública que funciona nela. Navegador desatualizado = porta destrancada.';
+  $('exploit').innerHTML='Você está em <b>'+name+' '+(ver||'?')+'</b> no <b>'+os+'</b>. Um atacante não serve exploit genérico — ele checa sua versão exata e dispara só a falha pública que funciona nela. Navegador desatualizado = porta destrancada.';
 })();
 
+/* ---------- câmera / mic ---------- */
 (function(){
   if(navigator.mediaDevices&&navigator.mediaDevices.enumerateDevices){
     navigator.mediaDevices.enumerateDevices().then(l=>{
       const m=l.filter(d=>d.kind==='audioinput').length,c=l.filter(d=>d.kind==='videoinput').length;
-      $('av').textContent=(c?c+' câmera(s)':'câmera')+' e '+(m?m+' microfone(s)':'microfone')+' detectados — captura só com permissão';
+      if(m||c)$('av').textContent=(c?c+' câmera(s)':'câmera')+' e '+(m?m+' microfone(s)':'microfone')+' detectados — captura só com permissão';
     }).catch(()=>{});
   }
 })();
 
-let map;
-fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>{
-  $('ip').textContent=d.ip||'—';
-  $('loc').textContent=[d.city,d.region,d.country_name].filter(Boolean).join(', ')||'—';
-  $('org').textContent=(d.org||'—');
-  if(d.latitude&&d.longitude&&window.L){
-    map=L.map('map',{zoomControl:true,attributionControl:true}).setView([d.latitude,d.longitude],12);
+/* ---------- IP interno (WebRTC) ---------- */
+(function(){
+  let any=false;const found=new Set();
+  try{
+    const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+    pc.createDataChannel('x');
+    pc.onicecandidate=e=>{if(!e.candidate)return;const m=/([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
+      if(m&&!found.has(m[1])){found.add(m[1]);any=true;
+        $('lan').innerHTML='Endereço do seu aparelho dentro da sua rede: <b>'+[...found].join(', ')+'</b>. Um site não deveria ver isso — com ele dá pra mapear quantos aparelhos tem na sua casa e tentar ataques contra seu roteador.';}};
+    pc.createOffer().then(o=>pc.setLocalDescription(o));
+    setTimeout(()=>{if(!any)$('lan').textContent='seu navegador bloqueou o vazamento do IP interno (bom pra você) — mas muitos não bloqueiam.';},2500);
+  }catch(e){$('lan').textContent='indisponível';}
+})();
+
+/* ---------- session replay (ao vivo) ---------- */
+(function(){
+  let mv=0,ck=0,sc=0,keys='';
+  const render=()=>{$('mv').textContent=mv;$('ck').textContent=ck;$('sc').textContent=sc;
+    $('kc').textContent=keys.replace(/ /g,'').length+ (keys?'':'');
+    if(keys)$('typed').textContent='capturei: '+keys;};
+  let raf=false;const q=()=>{if(raf)return;raf=true;requestAnimationFrame(()=>{raf=false;render();});};
+  addEventListener('mousemove',()=>{mv++;q();},{passive:true});
+  addEventListener('touchmove',()=>{mv++;q();},{passive:true});
+  addEventListener('click',()=>{ck++;render();});
+  addEventListener('scroll',()=>{sc++;q();},{passive:true});
+  addEventListener('keydown',e=>{
+    if(e.key&&e.key.length===1)keys+=e.key;
+    else if(e.key==='Backspace')keys=keys.slice(0,-1);
+    keys=keys.slice(-80);render();
+  });
+})();
+
+/* ---------- tells: adblock + anônima ---------- */
+(function(){
+  const bait=document.createElement('div');
+  bait.className='adsbox ad-banner ads ad-placement pub_300x250';
+  bait.style.cssText='position:absolute;left:-9999px;height:10px;width:10px';
+  bait.innerHTML='&nbsp;';
+  document.body.appendChild(bait);
+  setTimeout(()=>{
+    const blocked=bait.offsetHeight===0||bait.offsetParent===null||getComputedStyle(bait).display==='none';
+    bait.remove();
+    let adtxt=blocked?'Você usa bloqueador de anúncios: <b>sim</b>':'Bloqueador de anúncios: <b>não detectado</b>';
+    const done=inc=>{$('tells').innerHTML=adtxt+'<br>'+inc;};
+    if(navigator.storage&&navigator.storage.estimate){
+      navigator.storage.estimate().then(e=>{
+        const q=e.quota||0;
+        let t;
+        if(q>0&&q<1.3e9)t='Janela anônima/privada: <b>provável</b>';
+        else t='Janela anônima: <b>provavelmente não</b>';
+        done(t);
+      }).catch(()=>done(''));
+    } else done('');
+  },250);
+})();
+
+/* ---------- phishing demo (só mostra, nunca envia) ---------- */
+(function(){
+  const f=$('pf');if(!f)return;
+  const reveal=()=>{
+    const u=$('pf_user').value, p=$('pf_pass').value;
+    if(!u&&!p)return;
+    $('loot_user').textContent='usuário capturado:  '+(u||'(vazio)');
+    $('loot_pass').textContent='senha capturada:  '+(p||'(vazio)');
+    $('loot').classList.add('on');
+  };
+  f.addEventListener('submit',e=>{e.preventDefault();reveal();});
+  $('pf_pass').addEventListener('input',()=>{ if($('loot').classList.contains('on'))reveal(); });
+})();
+
+/* ---------- IP + mapa (3 provedores em cascata) ---------- */
+(async function(){
+  const jx=async u=>{const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw 0;return r.json();};
+  let g=null;
+  try{const d=await jx('https://ipwho.is/');if(d&&d.success!==false)g={ip:d.ip,city:d.city,region:d.region,country:d.country,org:(d.connection&&(d.connection.isp||d.connection.org))||'',lat:d.latitude,lon:d.longitude};}catch(e){}
+  if(!g){try{const d=await jx('https://ipapi.co/json/');if(d&&!d.error)g={ip:d.ip,city:d.city,region:d.region,country:d.country_name,org:d.org,lat:d.latitude,lon:d.longitude};}catch(e){}}
+  if(!g){try{const d=await jx('https://api.ipify.org?format=json');g={ip:d.ip};}catch(e){}}
+  if(!g){$('ip').textContent='—';$('mapcap').textContent='não consegui seu IP agora (provedores fora do ar ou offline)';return;}
+  $('ip').textContent=g.ip||'—';
+  $('loc').textContent=[g.city,g.region,g.country].filter(Boolean).join(', ')||'(só o IP desta vez)';
+  $('org').textContent=g.org||'—';
+  if(g.lat&&g.lon&&window.L){
+    const map=L.map('map',{zoomControl:true}).setView([g.lat,g.lon],12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenStreetMap'}).addTo(map);
-    L.circle([d.latitude,d.longitude],{radius:3500,color:'#ff6b63',fillColor:'#ff6b63',fillOpacity:.12,weight:1}).addTo(map);
-    L.marker([d.latitude,d.longitude]).addTo(map).bindPopup('Você abriu daqui — aprox.').openPopup();
-    $('mapcap').textContent='precisão de IP: cidade/provedor, não sua casa exata. (GPS exato só viria com permissão ou um app instalado.)';
+    L.circle([g.lat,g.lon],{radius:3500,color:'#ff6b63',fillColor:'#ff6b63',fillOpacity:.12,weight:1}).addTo(map);
+    L.marker([g.lat,g.lon]).addTo(map).bindPopup('Você abriu daqui — aprox.').openPopup();
+    setTimeout(()=>map.invalidateSize(),200);
+    $('mapcap').textContent='precisão de IP: cidade/provedor, não sua casa exata. GPS exato só com permissão ou app instalado.';
   } else {
-    $('mapcap').textContent='localização indisponível neste navegador';
+    $('mapcap').textContent='peguei seu IP, mas sem coordenadas desta vez';
   }
-}).catch(()=>{$('ip').textContent='—';$('mapcap').textContent='serviço de IP indisponível';});
+})();
 </script>
 </body>
 </html>
