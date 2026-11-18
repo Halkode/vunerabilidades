@@ -19,24 +19,28 @@
   .head h1{font-size:1.25rem;margin:0 0 4px}
   .head .meta{color:var(--muted);font-size:.85rem;font-family:var(--mono)}
   .summary{display:flex;gap:10px;margin:14px 0;flex-wrap:wrap}
-  .sum{flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--card)}
+  .sum{flex:1;min-width:140px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--card)}
   .sum .num{font-size:1.6rem;font-weight:700;font-family:var(--mono)}
-  .sum.r .num{color:var(--red)} .sum.a .num{color:var(--amber)} .sum.g .num{color:var(--green)}
-  .sum .lbl{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.4px}
+  .sum.r .num{color:var(--red)} .sum.a .num{color:var(--amber)} .sum.b .num{color:var(--accent)}
+  .sum .lbl{color:var(--muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.4px}
   h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);
     margin:22px 0 8px;padding-left:2px}
+  h2 .hint{text-transform:none;letter-spacing:0;font-weight:400;font-size:.8rem;color:var(--muted);opacity:.8}
   .item{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--line);
     border-left-width:3px;border-radius:8px;background:var(--card);padding:11px 14px;margin-bottom:8px}
-  .item.r{border-left-color:var(--red)} .item.a{border-left-color:var(--amber)} .item.g{border-left-color:var(--green)}
-  .ic{flex:0 0 auto;width:20px;text-align:center;color:var(--muted);font-family:var(--mono)}
+  .item.r{border-left-color:var(--red)} .item.a{border-left-color:var(--amber)}
+  .item.b{border-left-color:var(--accent)} .item.m{border-left-color:var(--muted)}
+  .ic{flex:0 0 auto;width:18px;text-align:center;color:var(--muted);font-family:var(--mono)}
   .body{flex:1;min-width:0}
   .name{font-weight:600;font-size:.92rem}
   .detail{color:var(--muted);font-size:.84rem;font-family:var(--mono);word-break:break-word;margin-top:2px}
-  .badge{flex:0 0 auto;font-size:.68rem;font-weight:700;letter-spacing:.3px;padding:3px 8px;
+  .badge{flex:0 0 auto;font-size:.66rem;font-weight:700;letter-spacing:.3px;padding:3px 8px;
     border-radius:99px;white-space:nowrap;align-self:center}
   .badge.r{background:rgba(255,107,99,.15);color:var(--red)}
   .badge.a{background:rgba(255,180,84,.15);color:var(--amber)}
+  .badge.b{background:rgba(76,194,255,.15);color:var(--accent)}
   .badge.g{background:rgba(94,201,138,.15);color:var(--green)}
+  .badge.m{background:rgba(133,151,168,.15);color:var(--muted)}
   footer{color:var(--muted);font-size:.82rem;border-top:1px solid var(--line);margin-top:24px;padding-top:14px}
   canvas{display:none}
 </style>
@@ -49,54 +53,56 @@
   </div>
 
   <div class="summary">
-    <div class="sum r"><div class="num" id="cR">0</div><div class="lbl">Exposto agora</div></div>
-    <div class="sum a"><div class="num" id="cA">0</div><div class="lbl">Exige permissão</div></div>
-    <div class="sum g"><div class="num" id="cG">0</div><div class="lbl">Bloqueado</div></div>
+    <div class="sum r"><div class="num" id="cR">0</div><div class="lbl">Vazou só de abrir</div></div>
+    <div class="sum a"><div class="num" id="cA">0</div><div class="lbl">Alvo c/ permissão</div></div>
   </div>
 
-  <h2>Exposto ao abrir o link — sem permissão, sem clique</h2>
+  <h2>Vazou só de abrir o link <span class="hint">— sem permissão, sem clique</span></h2>
   <div id="exposed"></div>
 
-  <h2>Presente no aparelho, mas exige sua autorização</h2>
+  <h2>Está no aparelho e seria o alvo <span class="hint">— mas exige um pop-up de permissão visível</span></h2>
   <div id="gated"></div>
 
-  <h2>Bloqueado pelo navegador — impossível, nem com permissão</h2>
-  <div id="blocked"></div>
-
   <footer>
-    Este laudo apenas <b>lista</b> o que está acessível. Nada foi capturado, gravado ou enviado:
-    microfone, câmera, localização exata e tela só podem ser acessados com um pop-up de permissão visível.
-    É exatamente essa barreira que um spyware real (tipo Pegasus) precisa furar com uma falha cara —
-    e é por isso que, num navegador atualizado, <b>só abrir um link</b> expõe muita coisa, mas não invade o aparelho.
+    Este laudo só <b>lista</b> o que está acessível — nada foi gravado, baixado ou enviado.
+    Repare no que NÃO aparece aqui: seu nome e e-mail do perfil do Chrome, suas senhas salvas, suas abas.
+    Uma página web não lê nada disso — aquilo é a tela do próprio navegador, só você vê.
+    O que vaza de verdade é o de cima: seu IP já pode entregar sua operadora ou até sua empresa.
+    Microfone, câmera, localização e tela só com permissão sua — e é essa barreira que um spyware caro
+    (tipo Pegasus) precisa furar com uma falha 0-day. Por isso <b>só abrir um link</b>, num navegador
+    atualizado, expõe bastante coisa, mas não invade o aparelho.
     <canvas id="fp" width="240" height="60"></canvas>
   </footer>
 </div>
 
 <script>
 const n=navigator;
-const C={r:0,a:0,g:0};
-function add(zone,icon,name,detail,sev){
+const C={r:0,a:0};
+function bump(k){ C[k]++; const el=document.getElementById({r:'cR',a:'cA'}[k]); if(el)el.textContent=C[k]; }
+function add(zone,name,detail,sev,badgeText){
   const d=document.createElement('div'); d.className='item '+sev;
-  d.innerHTML='<div class="ic"></div><div class="body"><div class="name"></div><div class="detail"></div></div><div class="badge '+sev+'"></div>';
-  d.querySelector('.ic').textContent=icon;
+  d.innerHTML='<div class="ic">></div><div class="body"><div class="name"></div><div class="detail"></div></div><div class="badge '+sev+'"></div>';
   d.querySelector('.name').textContent=name;
   d.querySelector('.detail').textContent=detail;
-  d.querySelector('.badge').textContent={r:'EXPOSTO',a:'REQUER AUTORIZAÇÃO',g:'BLOQUEADO'}[sev];
+  d.querySelector('.badge').textContent=badgeText||'';
   document.getElementById(zone).appendChild(d);
-  C[sev]++; document.getElementById({r:'cR',a:'cA',g:'cG'}[sev]).textContent=C[sev];
   return d;
 }
-function setDetail(el,txt){ if(el) el.querySelector('.detail').textContent=txt; }
+function setDetail(el,t){ if(el)el.querySelector('.detail').textContent=t; }
+function setBadge(el,t,cls){ if(el){const b=el.querySelector('.badge');b.textContent=t;if(cls){b.className='badge '+cls;el.className='item '+cls;}} }
 
-/* ===================== EXPOSTO AGORA ===================== */
-add('exposed','[~]','IP público e localização','consultando...','r');
-const ipItem=document.getElementById('exposed').lastChild;
-fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>{
-  setDetail(ipItem, d.ip+'  ·  '+[d.city,d.region,d.country_name].filter(Boolean).join(', ')+'  ·  '+(d.org||''));
-}).catch(()=>setDetail(ipItem,'serviço de IP indisponível'));
+/* ===================== VAZOU SÓ DE ABRIR ===================== */
+(function(){
+  const it=add('exposed','IP público e localização','consultando...','r','EXPOSTO'); bump('r');
+  const org=add('exposed','Rede / organização do IP','consultando...','r','EXPOSTO'); bump('r');
+  fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>{
+    setDetail(it, d.ip+'  ·  '+[d.city,d.region,d.country_name].filter(Boolean).join(', '));
+    setDetail(org, (d.org||'—')+'  ·  '+'ASN '+(d.asn||'?')+'   (entrega sua operadora ou até sua empresa)');
+  }).catch(()=>{setDetail(it,'serviço de IP indisponível');setDetail(org,'—');});
+})();
 
 (function(){
-  const it=add('exposed','[~]','IP interno da sua rede (WebRTC)','procurando...','r');
+  const it=add('exposed','IP interno da sua rede (WebRTC)','procurando...','r','EXPOSTO'); bump('r');
   let any=false;const found=new Set();
   try{
     const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
@@ -104,22 +110,21 @@ fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>{
     pc.onicecandidate=e=>{if(!e.candidate)return;const m=/([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
       if(m&&!found.has(m[1])){found.add(m[1]);any=true;setDetail(it,[...found].join('  ·  '));}};
     pc.createOffer().then(o=>pc.setLocalDescription(o));
-    setTimeout(()=>{if(!any){it.className='item g';it.querySelector('.badge').className='badge g';it.querySelector('.badge').textContent='BLOQUEADO';setDetail(it,'navegador bloqueou — bom pra você');C.r--;C.g++;document.getElementById('cR').textContent=C.r;document.getElementById('cG').textContent=C.g;}},2500);
+    setTimeout(()=>{if(!any)setDetail(it,'navegador bloqueou (bom pra você)');},2500);
   }catch(e){setDetail(it,'indisponível');}
 })();
 
 (function(){
   let gpu='—';try{const gl=document.createElement('canvas').getContext('webgl');const dbg=gl.getExtension('WEBGL_debug_renderer_info');gpu=gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);}catch(e){}
-  add('exposed','[~]','Hardware e sistema',
-    [n.platform, (n.hardwareConcurrency||'?')+' núcleos', (n.deviceMemory?n.deviceMemory+'GB RAM':''), gpu].filter(Boolean).join('  ·  '),'r');
+  add('exposed','Hardware e sistema',[n.platform,(n.hardwareConcurrency||'?')+' núcleos',(n.deviceMemory?n.deviceMemory+'GB RAM':''),gpu].filter(Boolean).join('  ·  '),'r','EXPOSTO'); bump('r');
 })();
 
-add('exposed','[~]','Tela', screen.width+'x'+screen.height+'  ·  '+window.devicePixelRatio+'x  ·  '+screen.colorDepth+'bit','r');
-add('exposed','[~]','Fuso e idioma', Intl.DateTimeFormat().resolvedOptions().timeZone+'  ·  '+n.language+'  ·  '+(n.languages||[]).join(','),'r');
-add('exposed','[~]','Veio de (referrer)', document.referrer||'(link aberto direto)','r');
+add('exposed','Tela e navegador',screen.width+'x'+screen.height+'  ·  '+window.devicePixelRatio+'x  ·  '+(n.userAgent.match(/(Chrome|Firefox|Safari|Edg)\/[\d.]+/)||['?'])[0],'r','EXPOSTO'); bump('r');
+add('exposed','Fuso e idioma',Intl.DateTimeFormat().resolvedOptions().timeZone+'  ·  '+n.language+'  ·  '+(n.languages||[]).join(','),'r','EXPOSTO'); bump('r');
+add('exposed','Veio de (referrer)',document.referrer||'(link aberto direto)','r','EXPOSTO'); bump('r');
 
 (function(){
-  const it=add('exposed','[~]','Digital única do aparelho (canvas)','calculando...','r');
+  const it=add('exposed','Digital única do aparelho (canvas)','calculando...','r','EXPOSTO'); bump('r');
   try{
     const c=document.getElementById('fp'),ctx=c.getContext('2d');
     ctx.textBaseline='top';ctx.font='16px Arial';ctx.fillStyle='#f60';ctx.fillRect(0,0,120,30);
@@ -130,51 +135,26 @@ add('exposed','[~]','Veio de (referrer)', document.referrer||'(link aberto diret
 })();
 
 (function(){
-  const it=add('exposed','[~]','Bateria','lendo...','r');
+  const it=add('exposed','Bateria','lendo...','r','EXPOSTO'); bump('r');
   if(n.getBattery)n.getBattery().then(b=>setDetail(it,Math.round(b.level*100)+'%  ·  '+(b.charging?'carregando':'na bateria'))).catch(()=>setDetail(it,'—'));
   else setDetail(it,'não exposto');
 })();
 
-/* ===================== EXIGE PERMISSÃO ===================== */
+/* ===================== ALVO COM PERMISSÃO ===================== */
 (function(){
-  const mic=add('gated','[!]','Microfone','verificando...','a');
-  const cam=add('gated','[!]','Câmera','verificando...','a');
+  const mic=add('gated','Microfone','verificando...','a','REQUER PERMISSÃO');
+  const cam=add('gated','Câmera','verificando...','a','REQUER PERMISSÃO');
+  bump('a'); bump('a');
   if(n.mediaDevices&&n.mediaDevices.enumerateDevices){
     n.mediaDevices.enumerateDevices().then(l=>{
-      const m=l.filter(d=>d.kind==='audioinput').length, c=l.filter(d=>d.kind==='videoinput').length;
-      setDetail(mic, m?('detectado ('+m+') — captura de áudio exigiria sua permissão'):'não confirmado sem permissão');
-      setDetail(cam, c?('detectada ('+c+') — captura de vídeo exigiria sua permissão'):'não confirmada sem permissão');
+      const m=l.filter(d=>d.kind==='audioinput').length,c=l.filter(d=>d.kind==='videoinput').length;
+      setDetail(mic,m?('detectado ('+m+') — captura de áudio exigiria sua permissão'):'presente, mas oculto sem permissão');
+      setDetail(cam,c?('detectada ('+c+') — captura de vídeo exigiria sua permissão'):'presente, mas oculta sem permissão');
     }).catch(()=>{setDetail(mic,'exige permissão');setDetail(cam,'exige permissão');});
-  } else {setDetail(mic,'exige permissão');setDetail(cam,'exige permissão');}
+  }
 })();
-
-add('gated','[!]','Localização exata (GPS)','precisa, mas abre um pedido de permissão visível','a');
-add('gated','[!]','Captura de tela','possível só via getDisplayMedia, com pop-up e você escolhendo o que mostrar','a');
-add('gated','[!]','Notificações','exige você aceitar o pedido','a');
-add('gated','[!]','Área de transferência (copiar/colar)','leitura exige permissão ou um gesto seu','a');
-
-(function(){
-  if(!n.permissions||!n.permissions.query)return;
-  const map={geolocation:'Localização exata (GPS)',camera:'Câmera',microphone:'Microfone',notifications:'Notificações'};
-  Object.keys(map).forEach(k=>{
-    n.permissions.query({name:k}).then(r=>{
-      [...document.querySelectorAll('#gated .item')].forEach(it=>{
-        if(it.querySelector('.name').textContent.startsWith(map[k].split(' ')[0])){
-          if(r.state==='granted'){it.querySelector('.badge').textContent='JÁ AUTORIZADO';}
-          else if(r.state==='denied'){it.querySelector('.badge').textContent='VOCÊ BLOQUEOU';}
-        }
-      });
-    }).catch(()=>{});
-  });
-})();
-
-/* ===================== BLOQUEADO ===================== */
-add('blocked','[x]','Suas outras abas','isolamento entre abas (same-origin) — inacessível','g');
-add('blocked','[x]','Histórico de navegação','navegador não expõe','g');
-add('blocked','[x]','O que você ouve no Spotify / outros apps','nenhuma API entrega isso a um site','g');
-add('blocked','[x]','Seus arquivos','sem acesso ao disco','g');
-add('blocked','[x]','Suas senhas salvas','isoladas no gerenciador','g');
-add('blocked','[x]','Conteúdo de outros sites onde você está logado','bloqueado pela origem','g');
+add('gated','Localização exata (GPS)','mais precisa que o IP — mas abre um pedido visível','a','REQUER PERMISSÃO'); bump('a');
+add('gated','Captura de tela','possível só via getDisplayMedia, com pop-up e você escolhendo o que mostrar','a','REQUER PERMISSÃO'); bump('a');
 
 document.getElementById('meta').textContent='alvo: este dispositivo · varredura concluída · '+new Date().toLocaleString('pt-BR');
 </script>
